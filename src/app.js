@@ -316,13 +316,20 @@ function renderSudokuBoard() {
       let html = '<span class="cell-notes">';
       for (let d = 1; d <= 9; d++) {
         const has = (notesArr[i] & (1 << d)) !== 0;
-        html += `<span class="note-digit">${has ? d : ''}</span>`;
+        const sameNoteCls = has && selVal === d ? ' is-same-note' : '';
+        html += `<span class="note-digit${sameNoteCls}">${has ? d : ''}</span>`;
       }
       html += '</span>';
       cell.innerHTML = html;
     } else {
       cell.textContent = '';
     }
+  }
+
+  const numBtns = $('numpad').children;
+  for (let k = 0; k < numBtns.length; k++) {
+    const btn = numBtns[k];
+    btn.classList.toggle('is-active-num', selVal > 0 && Number(btn.dataset.num) === selVal);
   }
 }
 
