@@ -68,16 +68,16 @@ function playNotesToggleSound(isOn) {
     const startFreq = isOn ? 587.33 : 659.25;
     const endFreq = isOn ? 880 : 440;
     osc.frequency.setValueAtTime(startFreq, now);
-    osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.065);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.08);
 
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.14, now + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.095);
+    gain.gain.linearRampToValueAtTime(0.45, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
 
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     osc.start(now);
-    osc.stop(now + 0.1);
+    osc.stop(now + 0.14);
   } catch {
     // Ignore audio errors on restricted devices
   }
