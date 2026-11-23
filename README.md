@@ -4,7 +4,7 @@ Web game Sudoku nhiều người chơi (3–4 bạn) chạy hoàn toàn tĩnh tr
 
 ## Tính năng chính
 
-- **Tạo phòng & Phòng chờ:** Chọn độ khó (*Dễ / Trung bình / Khó / Chuyên gia*), sinh mã phòng 6 ký tự hoặc link mời (`?room=XXXXXX`). Chủ phòng bấm **Start Game** để cả nhóm bắt đầu cùng lúc.
+- **Tạo phòng & Phòng chờ:** Chọn độ khó 6 cấp (*Dễ / Trung bình / Khó / Chuyên gia / Bậc thầy / Cực khó*), sinh mã phòng 6 ký tự hoặc link mời (`?room=XXXXXX`). Chủ phòng bấm **Start Game** để cả nhóm bắt đầu cùng lúc.
 - **Giải bảng riêng, đua tiến độ realtime:** Mỗi người giải trên bảng của riêng mình. Không gợi ý hay báo đúng/sai giữa chừng.
 - **Kiểm tra khi đạt 100%:** Chỉ khi điền đủ 81/81 ô, chương trình mới kiểm tra tính hợp lệ. Nếu sai, hệ thống đánh dấu đỏ các ô trùng số để người chơi sửa lại; nếu đúng 100%, khóa bảng và chốt thứ hạng theo thời gian hoàn thành.
 - **Standings + Mini-grid tô màu:** Hiển thị thứ hạng, phần trăm tiến độ và bảng thu nhỏ tô màu các ô từng người đã điền (giấu con số để tránh xem trộm).

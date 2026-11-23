@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   DIFFICULTIES,
   generateSudoku,
+  gradePuzzle,
   stringToBoard,
   countSolutions,
   computeFilledMask,
@@ -10,7 +11,15 @@ import {
   validateCompletedBoard,
 } from '../src/sudoku.js';
 
-test('generateSudoku creates valid unique-solution puzzles across all difficulties', () => {
+test('generateSudoku creates valid unique-solution puzzles across all 6 difficulties', () => {
+  assert.deepEqual(Object.keys(DIFFICULTIES), [
+    'easy',
+    'medium',
+    'hard',
+    'expert',
+    'master',
+    'extreme',
+  ]);
   for (const diff of Object.keys(DIFFICULTIES)) {
     const generated = generateSudoku(diff);
     assert.equal(generated.puzzle.length, 81);
@@ -34,6 +43,10 @@ test('generateSudoku creates valid unique-solution puzzles across all difficulti
 
     // Unique solution guaranteed
     assert.equal(countSolutions(puzzleBoard, 2), 1);
+
+    // Human-technique grader returns valid 1..6 tier
+    const graded = gradePuzzle(puzzleBoard);
+    assert.ok(graded.tier >= 1 && graded.tier <= 6);
   }
 });
 
