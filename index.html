@@ -117,13 +117,57 @@
     <!-- ==================== VIEW: GAME ==================== -->
     <section id="view-game" class="view">
       <div class="game-topbar">
-        <button id="btn-leave-game" class="btn btn-mini" type="button" title="Rời phòng">← Thoát</button>
-        <div class="game-meta">
-          <span id="game-room-badge" class="meta-chip">---</span>
-          <span id="game-diff-badge" class="meta-chip">Trung bình</span>
-          <span id="game-timer" class="meta-timer">00:00</span>
+        <div class="game-topbar-left">
+          <button id="btn-leave-game" class="btn btn-mini" type="button" title="Rời phòng">← Thoát</button>
+          <div class="game-meta">
+            <span id="game-room-badge" class="meta-chip">---</span>
+            <span id="game-diff-badge" class="meta-chip">Trung bình</span>
+            <span id="game-timer" class="meta-timer">00:00</span>
+          </div>
         </div>
-        <button id="btn-new-round-top" class="btn btn-mini btn-accent hidden" type="button">Ván mới</button>
+        <div class="game-topbar-right">
+          <button id="btn-new-round-top" class="btn btn-mini btn-accent hidden" type="button">Ván mới</button>
+          <div class="settings-anchor">
+            <button id="btn-game-settings" class="settings-pill" type="button" aria-expanded="false" aria-controls="game-settings-popover">
+              <span id="settings-player-swatch" class="color-square"></span>
+              <span id="settings-player-name" class="settings-pill-name">Bạn</span>
+              <svg viewBox="0 0 24 24" class="gear-icon" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </button>
+
+            <div id="game-settings-popover" class="settings-popover hidden" role="menu" aria-label="Tùy chọn bảng chơi">
+              <div class="settings-menu-title">TÙY CHỌN BẢNG</div>
+              <button id="btn-clear-board" class="settings-action-btn" type="button">
+                <strong id="clear-board-title">Xóa toàn bộ bảng</strong>
+                <span id="clear-board-desc">Điền sai nhiều? Xóa hết số và ghi chú bạn đã nhập để làm lại từ đầu.</span>
+              </button>
+
+              <label class="settings-toggle-row" for="toggle-auto-remove-notes">
+                <span class="settings-toggle-text">
+                  <strong>Tự động xóa ghi chú</strong>
+                  <span>Xóa ghi chú trùng khi điền số chính.</span>
+                </span>
+                <span class="switch">
+                  <input id="toggle-auto-remove-notes" type="checkbox" checked />
+                  <span class="switch-slider"></span>
+                </span>
+              </label>
+
+              <label class="settings-toggle-row" for="toggle-notes-sound">
+                <span class="settings-toggle-text">
+                  <strong>Âm thanh nút ghi chú</strong>
+                  <span>Phát âm thanh nhẹ khi bật/tắt Notes.</span>
+                </span>
+                <span class="switch">
+                  <input id="toggle-notes-sound" type="checkbox" checked />
+                  <span class="switch-slider"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Top horizontal players bar matching screenshot -->

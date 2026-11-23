@@ -19,6 +19,8 @@ const $ = (id) => document.getElementById(id);
 
 const STATE_STORAGE_PREFIX = 'usdoku_local_board_';
 const LAST_NAME_KEY = 'usdoku_last_player_name';
+const AUTO_NOTES_KEY = 'usdoku_auto_remove_notes';
+const NOTES_SOUND_KEY = 'usdoku_notes_sound';
 const PROGRESS_CIRCUMFERENCE = 2 * Math.PI * 20; // r = 20 -> ~125.66
 
 let transport = null;
@@ -40,6 +42,46 @@ let conflictSet = new Set();
 let timerInterval = null;
 let lastSeenChatCount = 0;
 let chatOpen = false;
+let autoRemoveNotes = localStorage.getItem(AUTO_NOTES_KEY) !== 'false';
+let notesSoundEnabled = localStorage.getItem(NOTES_SOUND_KEY) !== 'false';
+let clearConfirmPending = false;
+let clearConfirmTimer = null;
+let audioCtx = null;
+
+function playNotesToggleSound(isOn) {
+  if (!notesSoundEnabled) return;
+  try {
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) return;
+    if (!audioCtx) {
+      audioCtx = new AudioContextCtor();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+
+    const startFreq = isOn ? 587.33 : 659.25;
+    const endFreq = isOn ? 880 : 440;
+    osc.frequency.setValueAtTime(startFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.065);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.14, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.095);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  } catch {
+    // Ignore audio errors on restricted devices
+  }
+}
 
 // ---------- Utilities ----------
 function escapeHtml(str) {
@@ -506,6 +548,12 @@ function handleRoomUpdate(room) {
     const diffCfg = DIFFICULTIES[room.difficulty] || DIFFICULTIES.medium;
     $('game-diff-badge').textContent = diffCfg.label;
 
+    const me = room.players?.[transport.playerId];
+    const myColor = PLAYER_COLORS[(me?.colorIndex || 0) % PLAYER_COLORS.length];
+    $('settings-player-swatch').style.background = myColor.miniCell;
+    $('settings-player-name').textContent = me?.name || 'Bạn';
+    $('btn-clear-board').disabled = localFinished;
+
     const sorted = getSortedPlayers(room);
     renderTopPlayersBar(sorted);
     renderStandings(sorted);
@@ -634,7 +682,9 @@ function handleDigitInput(digit) {
   pushHistory();
   boardArr[selectedCell] = digit;
   notesArr[selectedCell] = 0;
-  clearPeerNotes(selectedCell, digit);
+  if (autoRemoveNotes) {
+    clearPeerNotes(selectedCell, digit);
+  }
   evaluateAndSyncProgress();
 }
 
@@ -678,6 +728,51 @@ function toggleNotesMode() {
   $('btn-notes').classList.toggle('active', notesMode);
   $('btn-notes').setAttribute('aria-pressed', String(notesMode));
   $('notes-badge').textContent = notesMode ? 'ON' : 'OFF';
+  playNotesToggleSound(notesMode);
+}
+
+function resetClearConfirm() {
+  clearConfirmPending = false;
+  if (clearConfirmTimer) {
+    clearTimeout(clearConfirmTimer);
+    clearConfirmTimer = null;
+  }
+  const btn = $('btn-clear-board');
+  btn.classList.remove('is-confirming');
+  $('clear-board-title').textContent = 'Xóa toàn bộ bảng';
+  $('clear-board-desc').textContent = 'Điền sai nhiều? Xóa hết số và ghi chú bạn đã nhập để làm lại từ đầu.';
+}
+
+function closeSettingsPopover() {
+  $('game-settings-popover').classList.add('hidden');
+  $('btn-game-settings').setAttribute('aria-expanded', 'false');
+  resetClearConfirm();
+}
+
+function handleClearBoard() {
+  if (!currentRoom || currentRoom.status !== 'playing') return;
+  if (localFinished) {
+    showToast('Bạn đã hoàn thành bảng rồi!', 'info');
+    return;
+  }
+
+  if (!clearConfirmPending) {
+    clearConfirmPending = true;
+    $('btn-clear-board').classList.add('is-confirming');
+    $('clear-board-title').textContent = 'Bấm lại lần nữa để xác nhận xóa hết!';
+    $('clear-board-desc').textContent = 'Toàn bộ số bạn đã điền và ghi chú sẽ bị xóa về trạng thái ban đầu.';
+    clearConfirmTimer = setTimeout(resetClearConfirm, 3500);
+    return;
+  }
+
+  resetClearConfirm();
+  pushHistory();
+  boardArr = puzzleArr.slice();
+  notesArr = new Array(81).fill(0);
+  conflictSet = new Set();
+  closeSettingsPopover();
+  evaluateAndSyncProgress();
+  showToast('Đã xóa toàn bộ bảng! (Bấm Undo nếu muốn khôi phục)', 'info');
 }
 
 function openNewRoundModal() {
@@ -687,6 +782,7 @@ function openNewRoundModal() {
 }
 
 async function resetToHome() {
+  closeSettingsPopover();
   if (timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
@@ -936,6 +1032,46 @@ function init() {
   $('btn-confirm-new-round').addEventListener('click', async () => {
     closeModal('new-round-modal');
     await transport?.startGame(newRoundDifficulty, currentRoom);
+  });
+
+  // In-game settings popover (Clear board, auto remove notes, notes sound)
+  $('toggle-auto-remove-notes').checked = autoRemoveNotes;
+  $('toggle-notes-sound').checked = notesSoundEnabled;
+
+  $('btn-game-settings').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const popover = $('game-settings-popover');
+    const willOpen = popover.classList.contains('hidden');
+    if (willOpen) {
+      resetClearConfirm();
+      popover.classList.remove('hidden');
+      $('btn-game-settings').setAttribute('aria-expanded', 'true');
+    } else {
+      closeSettingsPopover();
+    }
+  });
+
+  $('game-settings-popover').addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  $('btn-clear-board').addEventListener('click', handleClearBoard);
+
+  $('toggle-auto-remove-notes').addEventListener('change', (e) => {
+    autoRemoveNotes = e.target.checked;
+    localStorage.setItem(AUTO_NOTES_KEY, String(autoRemoveNotes));
+  });
+
+  $('toggle-notes-sound').addEventListener('change', (e) => {
+    notesSoundEnabled = e.target.checked;
+    localStorage.setItem(NOTES_SOUND_KEY, String(notesSoundEnabled));
+    if (notesSoundEnabled) playNotesToggleSound(true);
+  });
+
+  document.addEventListener('click', () => {
+    if (!$('game-settings-popover').classList.contains('hidden')) {
+      closeSettingsPopover();
+    }
   });
 
   // Firebase config modal
