@@ -12,24 +12,19 @@
   <main id="app" class="app-shell">
     <!-- ==================== VIEW: HOME ==================== -->
     <section id="view-home" class="view active">
-      <header class="brand-header">
-        <div class="brand-logo" aria-hidden="true">
-          <span>9</span><span>·</span><span>4</span>
-        </div>
-        <h1>UsDoku Mini</h1>
-        <p class="subtitle">Mỗi người giải một bảng riêng • Đua tiến độ &amp; chấm điểm khi đạt 100%</p>
-        <div class="config-status-row">
-          <span id="connection-badge" class="status-pill status-warn">Chưa gắn Firebase</span>
-          <button id="btn-open-config" class="link-btn" type="button">Cài đặt Firebase</button>
-        </div>
+      <header class="brand-header brand-header-compact">
+        <h1>UsDoku</h1>
       </header>
 
       <div class="card home-card">
-        <h2>Tạo phòng mới</h2>
-        <div class="field">
-          <label for="create-name">Tên của bạn</label>
-          <input id="create-name" type="text" maxlength="18" placeholder="Ví dụ: Hiệp nè" autocomplete="nickname" />
+        <div class="field" style="margin-bottom: 0;">
+          <label for="player-name">Tên của bạn</label>
+          <input id="player-name" type="text" maxlength="18" placeholder="Nhập tên hiển thị" autocomplete="nickname" />
         </div>
+      </div>
+
+      <div class="card home-card">
+        <h2>Tạo phòng mới</h2>
         <div class="field">
           <label>Chọn độ khó</label>
           <div id="create-difficulty-group" class="diff-group" role="radiogroup" aria-label="Độ khó">
@@ -47,23 +42,13 @@
       </div>
 
       <div class="card home-card">
-        <h2>Vào phòng bạn bè</h2>
-        <div class="field">
-          <label for="join-name">Tên của bạn</label>
-          <input id="join-name" type="text" maxlength="18" placeholder="Nhập tên hiển thị" autocomplete="nickname" />
-        </div>
+        <h2>Vào phòng</h2>
         <div class="field">
           <label for="join-code">Mã phòng (6 ký tự)</label>
-          <input id="join-code" type="text" maxlength="8" placeholder="Ví dụ: K7P4M9" class="code-input" autocapitalize="characters" />
+          <input id="join-code" type="text" maxlength="8" placeholder="K7P4M9" class="code-input" autocapitalize="characters" />
         </div>
         <button id="btn-join-room" class="btn btn-secondary btn-block" type="button">
           Vào phòng
-        </button>
-      </div>
-
-      <div class="demo-box">
-        <button id="btn-demo-mode" class="btn btn-ghost btn-block" type="button">
-          Chơi thử Demo (3 người mô phỏng, không cần Firebase)
         </button>
       </div>
     </section>
@@ -72,15 +57,14 @@
     <section id="view-lobby" class="view">
       <div class="top-nav">
         <button id="btn-leave-lobby" class="btn btn-icon-text" type="button">← Rời phòng</button>
-        <span id="lobby-mode-badge" class="mode-badge">Online</span>
       </div>
 
       <div class="card lobby-code-card">
-        <span class="muted-label">MÃ PHÒNG CỦA BẠN</span>
+        <span class="muted-label">MÃ PHÒNG</span>
         <div id="lobby-room-code" class="room-code-big">------</div>
         <div class="copy-actions">
           <button id="btn-copy-code" class="btn btn-small btn-secondary" type="button">Copy mã</button>
-          <button id="btn-copy-link" class="btn btn-small btn-secondary" type="button">Copy link mời</button>
+          <button id="btn-copy-link" class="btn btn-small btn-secondary" type="button">Copy link</button>
         </div>
       </div>
 
@@ -124,7 +108,6 @@
         <div class="game-topbar-left">
           <button id="btn-leave-game" class="btn btn-mini" type="button" title="Rời phòng">← Thoát</button>
           <div class="game-meta">
-            <span id="game-room-badge" class="meta-chip">---</span>
             <span id="game-diff-badge" class="meta-chip">Trung bình</span>
             <span id="game-timer" class="meta-timer">00:00</span>
           </div>
@@ -141,13 +124,7 @@
               </svg>
             </button>
 
-            <div id="game-settings-popover" class="settings-popover hidden" role="menu" aria-label="Tùy chọn bảng chơi">
-              <div class="settings-menu-title">TÙY CHỌN BẢNG</div>
-              <button id="btn-clear-board" class="settings-action-btn" type="button">
-                <strong id="clear-board-title">Xóa toàn bộ bảng</strong>
-                <span id="clear-board-desc">Điền sai nhiều? Xóa hết số và ghi chú bạn đã nhập để làm lại từ đầu.</span>
-              </button>
-
+            <div id="game-settings-popover" class="settings-popover hidden" role="menu" aria-label="Tùy chọn">
               <label class="settings-toggle-row" for="toggle-auto-remove-notes">
                 <span class="settings-toggle-text">
                   <strong>Tự động xóa ghi chú</strong>
@@ -162,7 +139,7 @@
               <label class="settings-toggle-row" for="toggle-notes-sound">
                 <span class="settings-toggle-text">
                   <strong>Âm thanh nút ghi chú</strong>
-                  <span>Phát âm thanh nhẹ khi bật/tắt Notes.</span>
+                  <span>Phát âm thanh khi bật/tắt Notes.</span>
                 </span>
                 <span class="switch">
                   <input id="toggle-notes-sound" type="checkbox" checked />
@@ -185,18 +162,17 @@
         <div id="sudoku-board" class="sudoku-board" role="grid" aria-label="Bảng Sudoku"></div>
       </div>
 
-      <!-- 5 Circular Control Buttons matching screenshot -->
+      <!-- 5 Circular Control Buttons (Reset replaces Solved) -->
       <div class="controls-row">
-        <div class="ctrl-item">
-          <div class="ctrl-circle progress-circle" aria-label="Tiến độ đã điền">
-            <svg viewBox="0 0 48 48" class="progress-svg">
-              <circle class="progress-track" cx="24" cy="24" r="20"></circle>
-              <circle id="progress-ring-circle" class="progress-fill" cx="24" cy="24" r="20"></circle>
+        <button id="btn-reset" class="ctrl-item ctrl-btn" type="button">
+          <span class="ctrl-circle">
+            <svg viewBox="0 0 24 24" class="ctrl-icon" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/>
+              <path d="M3 3v5h5"/>
             </svg>
-            <span id="progress-ring-text" class="progress-text">0%</span>
-          </div>
-          <span class="ctrl-label">Solved</span>
-        </div>
+          </span>
+          <span id="reset-label" class="ctrl-label">Reset</span>
+        </button>
 
         <button id="btn-chat" class="ctrl-item ctrl-btn" type="button">
           <span class="ctrl-circle">
@@ -277,25 +253,6 @@
         <input id="chat-input" type="text" maxlength="160" placeholder="Nhắn gì đó cho cả nhóm..." autocomplete="off" />
         <button class="btn btn-primary btn-small" type="submit">Gửi</button>
       </form>
-    </div>
-  </div>
-
-  <!-- ==================== MODAL: FIREBASE CONFIG ==================== -->
-  <div id="config-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Cài đặt Firebase">
-    <div class="modal-backdrop" data-close="config-modal"></div>
-    <div class="modal-sheet">
-      <div class="modal-head">
-        <h3>Cài đặt Firebase Realtime</h3>
-        <button id="btn-close-config" class="btn btn-mini" type="button">Đóng</button>
-      </div>
-      <p class="modal-desc">
-        Để chơi qua 4G với bạn bè trên GitHub Pages, bạn dán đoạn <code>firebaseConfig</code> (JSON hoặc JS object) vào file <code>firebase-config.js</code>, hoặc dán nhanh vào ô dưới để thử ngay trên máy này:
-      </p>
-      <textarea id="config-textarea" class="config-textarea" rows="7" placeholder='{"apiKey": "...", "databaseURL": "https://...-default-rtdb.asia-southeast1.firebasedatabase.app", "projectId": "..."}'></textarea>
-      <div class="modal-actions">
-        <button id="btn-clear-saved-config" class="btn btn-ghost btn-small" type="button">Xóa cấu hình tạm</button>
-        <button id="btn-save-config" class="btn btn-primary btn-small" type="button">Lưu cấu hình</button>
-      </div>
     </div>
   </div>
 

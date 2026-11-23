@@ -7,12 +7,8 @@ import {
   validateCompletedBoard,
 } from './sudoku.js';
 import {
-  DemoTransport,
   FirebaseTransport,
   PLAYER_COLORS,
-  clearLocalFirebaseConfig,
-  getEffectiveFirebaseConfig,
-  saveLocalFirebaseConfig,
 } from './realtime.js';
 
 const $ = (id) => document.getElementById(id);
@@ -21,7 +17,6 @@ const STATE_STORAGE_PREFIX = 'usdoku_local_board_';
 const LAST_NAME_KEY = 'usdoku_last_player_name';
 const AUTO_NOTES_KEY = 'usdoku_auto_remove_notes';
 const NOTES_SOUND_KEY = 'usdoku_notes_sound';
-const PROGRESS_CIRCUMFERENCE = 2 * Math.PI * 20; // r = 20 -> ~125.66
 
 let transport = null;
 let currentRoom = null;
@@ -125,18 +120,6 @@ function setDiffGroupActive(containerId, diff) {
   });
 }
 
-function updateFirebaseBadge() {
-  const { config, source } = getEffectiveFirebaseConfig();
-  const badge = $('connection-badge');
-  if (config) {
-    badge.className = 'status-pill status-ok';
-    badge.textContent = source === 'local' ? 'Firebase (Cấu hình tạm)' : 'Firebase đã sẵn sàng';
-  } else {
-    badge.className = 'status-pill status-warn';
-    badge.textContent = 'Chưa gắn Firebase';
-  }
-}
-
 function getBoardStorageKey(code, round, playerId) {
   return `${STATE_STORAGE_PREFIX}${code}_${round}_${playerId}`;
 }
@@ -214,7 +197,6 @@ function getSortedPlayers(room) {
 function renderLobby(room) {
   showView('lobby');
   $('lobby-room-code').textContent = room.code;
-  $('lobby-mode-badge').textContent = transport?.mode === 'demo' ? 'Demo Offline' : 'Online Firebase';
 
   const diffCfg = DIFFICULTIES[room.difficulty] || DIFFICULTIES.medium;
   $('lobby-diff-badge').textContent = diffCfg.label;
@@ -331,13 +313,6 @@ function renderSudokuBoard() {
     const btn = numBtns[k];
     btn.classList.toggle('is-active-num', selVal > 0 && Number(btn.dataset.num) === selVal);
   }
-}
-
-function renderProgressRing(progress) {
-  const pct = Math.max(0, Math.min(100, progress));
-  const offset = PROGRESS_CIRCUMFERENCE * (1 - pct / 100);
-  $('progress-ring-circle').style.strokeDashoffset = String(offset);
-  $('progress-ring-text').textContent = `${pct}%`;
 }
 
 function renderTopPlayersBar(sortedPlayers) {
@@ -500,6 +475,8 @@ function syncRoundIfChanged(room) {
   if (room.round === activeRound && puzzleArr.some((n) => n > 0)) return;
 
   activeRound = room.round;
+  resetClearConfirm();
+  closeSettingsPopover();
   puzzleArr = stringToBoard(room.puzzle);
   selectedCell = puzzleArr.findIndex((n) => n === 0);
   notesMode = false;
@@ -551,7 +528,6 @@ function handleRoomUpdate(room) {
     syncRoundIfChanged(room);
     showView('game');
 
-    $('game-room-badge').textContent = room.code;
     const diffCfg = DIFFICULTIES[room.difficulty] || DIFFICULTIES.medium;
     $('game-diff-badge').textContent = diffCfg.label;
 
@@ -559,13 +535,12 @@ function handleRoomUpdate(room) {
     const myColor = PLAYER_COLORS[(me?.colorIndex || 0) % PLAYER_COLORS.length];
     $('settings-player-swatch').style.background = myColor.miniCell;
     $('settings-player-name').textContent = me?.name || 'Bạn';
-    $('btn-clear-board').disabled = localFinished;
+    $('btn-reset').disabled = localFinished;
 
     const sorted = getSortedPlayers(room);
     renderTopPlayersBar(sorted);
     renderStandings(sorted);
     renderSudokuBoard();
-    renderProgressRing(computeProgress(boardArr, puzzleArr));
     updateBannerAndButtons();
     renderChat(room);
   }
@@ -620,7 +595,6 @@ async function evaluateAndSyncProgress() {
 
   saveLocalBoard();
   renderSudokuBoard();
-  renderProgressRing(progress);
   updateBannerAndButtons();
 
   // Immediately re-render local player standing while waiting for Firebase roundtrip
@@ -744,16 +718,14 @@ function resetClearConfirm() {
     clearTimeout(clearConfirmTimer);
     clearConfirmTimer = null;
   }
-  const btn = $('btn-clear-board');
+  const btn = $('btn-reset');
   btn.classList.remove('is-confirming');
-  $('clear-board-title').textContent = 'Xóa toàn bộ bảng';
-  $('clear-board-desc').textContent = 'Điền sai nhiều? Xóa hết số và ghi chú bạn đã nhập để làm lại từ đầu.';
+  $('reset-label').textContent = 'Reset';
 }
 
 function closeSettingsPopover() {
   $('game-settings-popover').classList.add('hidden');
   $('btn-game-settings').setAttribute('aria-expanded', 'false');
-  resetClearConfirm();
 }
 
 function handleClearBoard() {
@@ -765,9 +737,9 @@ function handleClearBoard() {
 
   if (!clearConfirmPending) {
     clearConfirmPending = true;
-    $('btn-clear-board').classList.add('is-confirming');
-    $('clear-board-title').textContent = 'Bấm lại lần nữa để xác nhận xóa hết!';
-    $('clear-board-desc').textContent = 'Toàn bộ số bạn đã điền và ghi chú sẽ bị xóa về trạng thái ban đầu.';
+    $('btn-reset').classList.add('is-confirming');
+    $('reset-label').textContent = 'Xác nhận?';
+    showToast('Bấm Reset lần nữa để xóa toàn bộ bảng', 'info');
     clearConfirmTimer = setTimeout(resetClearConfirm, 3500);
     return;
   }
@@ -777,9 +749,8 @@ function handleClearBoard() {
   boardArr = puzzleArr.slice();
   notesArr = new Array(81).fill(0);
   conflictSet = new Set();
-  closeSettingsPopover();
   evaluateAndSyncProgress();
-  showToast('Đã xóa toàn bộ bảng! (Bấm Undo nếu muốn khôi phục)', 'info');
+  showToast('Đã đặt lại bảng! (Bấm Undo nếu muốn khôi phục)', 'info');
 }
 
 function openNewRoundModal() {
@@ -789,6 +760,7 @@ function openNewRoundModal() {
 }
 
 async function resetToHome() {
+  resetClearConfirm();
   closeSettingsPopover();
   if (timerInterval) {
     clearInterval(timerInterval);
@@ -821,13 +793,11 @@ function setupDifficultyPicker(containerId, onSelect) {
 
 function init() {
   buildSudokuGridDom();
-  updateFirebaseBadge();
 
   // Pre-fill last name and invite link room code
   const savedName = localStorage.getItem(LAST_NAME_KEY) || '';
   if (savedName) {
-    $('create-name').value = savedName;
-    $('join-name').value = savedName;
+    $('player-name').value = savedName;
   }
   const params = new URLSearchParams(window.location.search);
   const urlRoom = params.get('room');
@@ -851,14 +821,13 @@ function init() {
 
   // Create online room
   $('btn-create-room').addEventListener('click', async () => {
-    const name = $('create-name').value.trim();
+    const name = $('player-name').value.trim();
     if (!name) {
       showToast('Vui lòng nhập tên của bạn!', 'error');
-      $('create-name').focus();
+      $('player-name').focus();
       return;
     }
     localStorage.setItem(LAST_NAME_KEY, name);
-    $('join-name').value = name;
 
     const btn = $('btn-create-room');
     btn.disabled = true;
@@ -872,9 +841,6 @@ function init() {
     } catch (err) {
       transport = null;
       showToast(err.message || 'Không thể tạo phòng.', 'error');
-      if (!getEffectiveFirebaseConfig().config) {
-        openModal('config-modal');
-      }
     } finally {
       btn.disabled = false;
     }
@@ -882,11 +848,11 @@ function init() {
 
   // Join online room
   $('btn-join-room').addEventListener('click', async () => {
-    const name = $('join-name').value.trim();
+    const name = $('player-name').value.trim();
     const code = $('join-code').value.trim().toUpperCase();
     if (!name) {
       showToast('Vui lòng nhập tên của bạn!', 'error');
-      $('join-name').focus();
+      $('player-name').focus();
       return;
     }
     if (code.length < 4) {
@@ -895,7 +861,6 @@ function init() {
       return;
     }
     localStorage.setItem(LAST_NAME_KEY, name);
-    $('create-name').value = name;
 
     const btn = $('btn-join-room');
     btn.disabled = true;
@@ -909,25 +874,9 @@ function init() {
     } catch (err) {
       transport = null;
       showToast(err.message || 'Không thể vào phòng.', 'error');
-      if (!getEffectiveFirebaseConfig().config) {
-        openModal('config-modal');
-      }
     } finally {
       btn.disabled = false;
     }
-  });
-
-  // Demo mode (3-player simulated)
-  $('btn-demo-mode').addEventListener('click', async () => {
-    const name = $('create-name').value.trim() || $('join-name').value.trim() || 'Bạn';
-    localStorage.setItem(LAST_NAME_KEY, name);
-    transport = new DemoTransport();
-    await transport.createRoom({
-      playerName: name,
-      difficulty: selectedDifficulty,
-      onUpdate: handleRoomUpdate,
-    });
-    showToast('Đang chạy chế độ Demo 3 người!', 'success');
   });
 
   // Lobby actions
@@ -979,6 +928,7 @@ function init() {
     handleDigitInput(Number(btn.dataset.num));
   });
 
+  $('btn-reset').addEventListener('click', handleClearBoard);
   $('btn-notes').addEventListener('click', toggleNotesMode);
   $('btn-erase').addEventListener('click', handleErase);
   $('btn-undo').addEventListener('click', handleUndo);
@@ -1041,7 +991,7 @@ function init() {
     await transport?.startGame(newRoundDifficulty, currentRoom);
   });
 
-  // In-game settings popover (Clear board, auto remove notes, notes sound)
+  // In-game settings popover (auto remove notes, notes sound)
   $('toggle-auto-remove-notes').checked = autoRemoveNotes;
   $('toggle-notes-sound').checked = notesSoundEnabled;
 
@@ -1050,7 +1000,6 @@ function init() {
     const popover = $('game-settings-popover');
     const willOpen = popover.classList.contains('hidden');
     if (willOpen) {
-      resetClearConfirm();
       popover.classList.remove('hidden');
       $('btn-game-settings').setAttribute('aria-expanded', 'true');
     } else {
@@ -1061,8 +1010,6 @@ function init() {
   $('game-settings-popover').addEventListener('click', (e) => {
     e.stopPropagation();
   });
-
-  $('btn-clear-board').addEventListener('click', handleClearBoard);
 
   $('toggle-auto-remove-notes').addEventListener('change', (e) => {
     autoRemoveNotes = e.target.checked;
@@ -1079,30 +1026,6 @@ function init() {
     if (!$('game-settings-popover').classList.contains('hidden')) {
       closeSettingsPopover();
     }
-  });
-
-  // Firebase config modal
-  $('btn-open-config').addEventListener('click', () => {
-    const { config } = getEffectiveFirebaseConfig();
-    $('config-textarea').value = config ? JSON.stringify(config, null, 2) : '';
-    openModal('config-modal');
-  });
-  $('btn-close-config').addEventListener('click', () => closeModal('config-modal'));
-  $('btn-save-config').addEventListener('click', () => {
-    try {
-      saveLocalFirebaseConfig($('config-textarea').value);
-      updateFirebaseBadge();
-      closeModal('config-modal');
-      showToast('Đã lưu cấu hình Firebase tạm trên trình duyệt!', 'success');
-    } catch (err) {
-      showToast(err.message || 'JSON không hợp lệ', 'error');
-    }
-  });
-  $('btn-clear-saved-config').addEventListener('click', () => {
-    clearLocalFirebaseConfig();
-    $('config-textarea').value = '';
-    updateFirebaseBadge();
-    showToast('Đã xóa cấu hình tạm.', 'info');
   });
 
   // Backdrop clicks close modals
