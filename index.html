@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>UsDoku Mini — Chơi Sudoku cùng bạn bè</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <main id="app" class="app-shell">
+    <!-- ==================== VIEW: HOME ==================== -->
+    <section id="view-home" class="view active">
+      <header class="brand-header">
+        <div class="brand-logo" aria-hidden="true">
+          <span>9</span><span>·</span><span>4</span>
+        </div>
+        <h1>UsDoku Mini</h1>
+        <p class="subtitle">Mỗi người giải một bảng riêng • Đua tiến độ &amp; chấm điểm khi đạt 100%</p>
+        <div class="config-status-row">
+          <span id="connection-badge" class="status-pill status-warn">Chưa gắn Firebase</span>
+          <button id="btn-open-config" class="link-btn" type="button">Cài đặt Firebase</button>
+        </div>
+      </header>
+
+      <div class="card home-card">
+        <h2>Tạo phòng mới</h2>
+        <div class="field">
+          <label for="create-name">Tên của bạn</label>
+          <input id="create-name" type="text" maxlength="18" placeholder="Ví dụ: Hiệp nè" autocomplete="nickname" />
+        </div>
+        <div class="field">
+          <label>Chọn độ khó</label>
+          <div id="create-difficulty-group" class="diff-group" role="radiogroup" aria-label="Độ khó">
+            <button type="button" class="diff-btn" data-diff="easy">Dễ</button>
+            <button type="button" class="diff-btn active" data-diff="medium">Trung bình</button>
+            <button type="button" class="diff-btn" data-diff="hard">Khó</button>
+            <button type="button" class="diff-btn" data-diff="expert">Chuyên gia</button>
+          </div>
+        </div>
+        <button id="btn-create-room" class="btn btn-primary btn-block" type="button">
+          Tạo phòng &amp; Lấy mã
+        </button>
+      </div>
+
+      <div class="card home-card">
+        <h2>Vào phòng bạn bè</h2>
+        <div class="field">
+          <label for="join-name">Tên của bạn</label>
+          <input id="join-name" type="text" maxlength="18" placeholder="Nhập tên hiển thị" autocomplete="nickname" />
+        </div>
+        <div class="field">
+          <label for="join-code">Mã phòng (6 ký tự)</label>
+          <input id="join-code" type="text" maxlength="8" placeholder="Ví dụ: K7P4M9" class="code-input" autocapitalize="characters" />
+        </div>
+        <button id="btn-join-room" class="btn btn-secondary btn-block" type="button">
+          Vào phòng
+        </button>
+      </div>
+
+      <div class="demo-box">
+        <button id="btn-demo-mode" class="btn btn-ghost btn-block" type="button">
+          Chơi thử Demo (3 người mô phỏng, không cần Firebase)
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW: LOBBY ==================== -->
+    <section id="view-lobby" class="view">
+      <div class="top-nav">
+        <button id="btn-leave-lobby" class="btn btn-icon-text" type="button">← Rời phòng</button>
+        <span id="lobby-mode-badge" class="mode-badge">Online</span>
+      </div>
+
+      <div class="card lobby-code-card">
+        <span class="muted-label">MÃ PHÒNG CỦA BẠN</span>
+        <div id="lobby-room-code" class="room-code-big">------</div>
+        <div class="copy-actions">
+          <button id="btn-copy-code" class="btn btn-small btn-secondary" type="button">Copy mã</button>
+          <button id="btn-copy-link" class="btn btn-small btn-secondary" type="button">Copy link mời</button>
+        </div>
+      </div>
+
+      <div class="card lobby-settings-card">
+        <div class="row-between">
+          <span class="section-label">Độ khó ván đấu</span>
+          <span id="lobby-diff-badge" class="diff-pill">Trung bình</span>
+        </div>
+        <div id="lobby-diff-controls" class="diff-group hidden" style="margin-top: 10px;">
+          <button type="button" class="diff-btn" data-diff="easy">Dễ</button>
+          <button type="button" class="diff-btn" data-diff="medium">Trung bình</button>
+          <button type="button" class="diff-btn" data-diff="hard">Khó</button>
+          <button type="button" class="diff-btn" data-diff="expert">Chuyên gia</button>
+        </div>
+      </div>
+
+      <div class="card lobby-players-card">
+        <div class="row-between" style="margin-bottom: 10px;">
+          <span class="section-label">Người chơi trong phòng</span>
+          <span id="lobby-player-count" class="muted-label">0 người</span>
+        </div>
+        <ul id="lobby-players-list" class="lobby-players-list"></ul>
+      </div>
+
+      <div class="lobby-footer">
+        <button id="btn-claim-host" class="btn btn-secondary btn-block hidden" type="button">
+          Nhận quyền chủ phòng
+        </button>
+        <button id="btn-start-game" class="btn btn-primary btn-block hidden" type="button">
+          Start Game
+        </button>
+        <p id="lobby-wait-msg" class="wait-msg">Đang chờ chủ phòng bấm Start Game...</p>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW: GAME ==================== -->
+    <section id="view-game" class="view">
+      <div class="game-topbar">
+        <button id="btn-leave-game" class="btn btn-mini" type="button" title="Rời phòng">← Thoát</button>
+        <div class="game-meta">
+          <span id="game-room-badge" class="meta-chip">---</span>
+          <span id="game-diff-badge" class="meta-chip">Trung bình</span>
+          <span id="game-timer" class="meta-timer">00:00</span>
+        </div>
+        <button id="btn-new-round-top" class="btn btn-mini btn-accent hidden" type="button">Ván mới</button>
+      </div>
+
+      <!-- Top horizontal players bar matching screenshot -->
+      <div id="top-players-bar" class="top-players-bar" aria-label="Tiến độ người chơi"></div>
+
+      <!-- Validation / Victory banner (shown ONLY at 100%) -->
+      <div id="game-status-banner" class="game-banner hidden" role="status"></div>
+
+      <!-- 9x9 Sudoku Board -->
+      <div class="board-wrap">
+        <div id="sudoku-board" class="sudoku-board" role="grid" aria-label="Bảng Sudoku"></div>
+      </div>
+
+      <!-- 5 Circular Control Buttons matching screenshot -->
+      <div class="controls-row">
+        <div class="ctrl-item">
+          <div class="ctrl-circle progress-circle" aria-label="Tiến độ đã điền">
+            <svg viewBox="0 0 48 48" class="progress-svg">
+              <circle class="progress-track" cx="24" cy="24" r="20"></circle>
+              <circle id="progress-ring-circle" class="progress-fill" cx="24" cy="24" r="20"></circle>
+            </svg>
+            <span id="progress-ring-text" class="progress-text">0%</span>
+          </div>
+          <span class="ctrl-label">Solved</span>
+        </div>
+
+        <button id="btn-chat" class="ctrl-item ctrl-btn" type="button">
+          <span class="ctrl-circle">
+            <svg viewBox="0 0 24 24" class="ctrl-icon" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+            </svg>
+            <span id="chat-unread-dot" class="unread-dot hidden"></span>
+          </span>
+          <span class="ctrl-label">Chat</span>
+        </button>
+
+        <button id="btn-undo" class="ctrl-item ctrl-btn" type="button">
+          <span class="ctrl-circle">
+            <svg viewBox="0 0 24 24" class="ctrl-icon" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 14L4 9l5-5"/>
+              <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>
+            </svg>
+          </span>
+          <span class="ctrl-label">Undo</span>
+        </button>
+
+        <button id="btn-notes" class="ctrl-item ctrl-btn" type="button" aria-pressed="false">
+          <span class="ctrl-circle">
+            <svg viewBox="0 0 24 24" class="ctrl-icon" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 20h9"/>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+            <span id="notes-badge" class="mode-tag">OFF</span>
+          </span>
+          <span class="ctrl-label">Notes</span>
+        </button>
+
+        <button id="btn-erase" class="ctrl-item ctrl-btn" type="button">
+          <span class="ctrl-circle">
+            <svg viewBox="0 0 24 24" class="ctrl-icon" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 20H7L3 16c-.6-.6-.6-1.5 0-2.1l9.9-9.9c.6-.6 1.5-.6 2.1 0l6 6c.6.6.6 1.5 0 2.1L13.1 20"/>
+              <path d="M6 11l7 7"/>
+            </svg>
+          </span>
+          <span class="ctrl-label">Erase</span>
+        </button>
+      </div>
+
+      <!-- Number Pad 1-9 -->
+      <div id="numpad" class="numpad" aria-label="Bàn phím số">
+        <button type="button" class="num-btn" data-num="1">1</button>
+        <button type="button" class="num-btn" data-num="2">2</button>
+        <button type="button" class="num-btn" data-num="3">3</button>
+        <button type="button" class="num-btn" data-num="4">4</button>
+        <button type="button" class="num-btn" data-num="5">5</button>
+        <button type="button" class="num-btn" data-num="6">6</button>
+        <button type="button" class="num-btn" data-num="7">7</button>
+        <button type="button" class="num-btn" data-num="8">8</button>
+        <button type="button" class="num-btn" data-num="9">9</button>
+      </div>
+
+      <!-- Standings Section matching screenshot -->
+      <section id="standings-section" class="standings-section">
+        <div class="standings-header">
+          <h2>Standings</h2>
+          <span class="standings-sub">Ranked by finish</span>
+        </div>
+        <div id="standings-list" class="standings-list"></div>
+      </section>
+    </section>
+  </main>
+
+  <!-- ==================== MODAL: CHAT ==================== -->
+  <div id="chat-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Chat phòng">
+    <div class="modal-backdrop" data-close="chat-modal"></div>
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <h3>Chat phòng</h3>
+        <button id="btn-close-chat" class="btn btn-mini" type="button">Đóng</button>
+      </div>
+      <div id="chat-messages" class="chat-messages"></div>
+      <form id="chat-form" class="chat-form">
+        <input id="chat-input" type="text" maxlength="160" placeholder="Nhắn gì đó cho cả nhóm..." autocomplete="off" />
+        <button class="btn btn-primary btn-small" type="submit">Gửi</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: FIREBASE CONFIG ==================== -->
+  <div id="config-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Cài đặt Firebase">
+    <div class="modal-backdrop" data-close="config-modal"></div>
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <h3>Cài đặt Firebase Realtime</h3>
+        <button id="btn-close-config" class="btn btn-mini" type="button">Đóng</button>
+      </div>
+      <p class="modal-desc">
+        Để chơi qua 4G với bạn bè trên GitHub Pages, bạn dán đoạn <code>firebaseConfig</code> (JSON hoặc JS object) vào file <code>firebase-config.js</code>, hoặc dán nhanh vào ô dưới để thử ngay trên máy này:
+      </p>
+      <textarea id="config-textarea" class="config-textarea" rows="7" placeholder='{"apiKey": "...", "databaseURL": "https://...-default-rtdb.asia-southeast1.firebasedatabase.app", "projectId": "..."}'></textarea>
+      <div class="modal-actions">
+        <button id="btn-clear-saved-config" class="btn btn-ghost btn-small" type="button">Xóa cấu hình tạm</button>
+        <button id="btn-save-config" class="btn btn-primary btn-small" type="button">Lưu cấu hình</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: NEW ROUND ==================== -->
+  <div id="new-round-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Mở ván mới">
+    <div class="modal-backdrop" data-close="new-round-modal"></div>
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <h3>Mở ván mới cho cả phòng</h3>
+        <button id="btn-close-new-round" class="btn btn-mini" type="button">Đóng</button>
+      </div>
+      <p class="modal-desc">Chọn độ khó cho ván tiếp theo (tất cả người chơi sẽ bắt đầu cùng lúc trên bảng mới):</p>
+      <div id="new-round-diff-group" class="diff-group" style="margin: 12px 0 18px;">
+        <button type="button" class="diff-btn" data-diff="easy">Dễ</button>
+        <button type="button" class="diff-btn" data-diff="medium">Trung bình</button>
+        <button type="button" class="diff-btn" data-diff="hard">Khó</button>
+        <button type="button" class="diff-btn" data-diff="expert">Chuyên gia</button>
+      </div>
+      <button id="btn-confirm-new-round" class="btn btn-primary btn-block" type="button">Bắt đầu ván mới</button>
+    </div>
+  </div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
